@@ -5,7 +5,8 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from itertools import count
-from time import time_ns, sleep
+from time import time_ns
+import time
 from typing import Callable, List, Union
 
 from .utils import WorkerStatus
@@ -195,18 +196,18 @@ def progress_wrapper(
     sleep_seconds: int = 0,
     sleep_after_percent: float = 100.0
 ) -> Callable:
-    """Wrap the function to apply in a function which monitors the part of work already
-    done and pauses after every n% completion.
+    """Wrap the function to apply in a function which monitor the part of work already
+    done.
     """
     counter = count()
     state = ProgressState(chunk_size)
-    sleep_interval = int(chunk_size * (sleep_after_percent / 100.0))
+    sleep_after_iteration = max(int(chunk_size * (sleep_after_percent / 100.0)), 1)  # Ensure at least 1
 
     def closure(*user_defined_function_args, **user_defined_functions_kwargs):
         iteration = next(counter)
 
-        if iteration % sleep_interval == 0 and iteration != 0:
-            sleep(sleep_seconds)
+        if iteration % sleep_after_iteration == 0:  # Sleep every sleep_after_iteration
+            time.sleep(sleep_seconds)
 
         if iteration == state.next_put_iteration:
             time_now = time_ns()
