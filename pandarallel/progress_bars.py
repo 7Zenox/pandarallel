@@ -5,7 +5,7 @@ import sys
 from abc import ABC, abstractmethod
 from enum import Enum
 from itertools import count
-from time import time_ns
+from time import time_ns, sleep
 from typing import Callable, List, Union
 
 from .utils import WorkerStatus
@@ -192,15 +192,21 @@ def progress_wrapper(
     master_workers_queue: multiprocessing.Queue,
     index: int,
     chunk_size: int,
+    sleep_seconds: int = 0,
+    sleep_after_percent: float = 100.0
 ) -> Callable:
-    """Wrap the function to apply in a function which monitor the part of work already
-    done.
+    """Wrap the function to apply in a function which monitors the part of work already
+    done and pauses after every n% completion.
     """
     counter = count()
     state = ProgressState(chunk_size)
+    sleep_interval = int(chunk_size * (sleep_after_percent / 100.0))
 
     def closure(*user_defined_function_args, **user_defined_functions_kwargs):
         iteration = next(counter)
+
+        if iteration % sleep_interval == 0 and iteration != 0:
+            sleep(sleep_seconds)
 
         if iteration == state.next_put_iteration:
             time_now = time_ns()
